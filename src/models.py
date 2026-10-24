@@ -11,7 +11,7 @@ class Stock:
     @property
     def ratio(self) -> float:
         """Value to cost ratio, for the greedy upper bounding"""
-        return self.return_val / sel.cost if self.cost > 0 else 0.0
+        return self.return_val / self.cost if self.cost > 0 else 0.0
 
 class Node:
     def __init__(self, level: int, profit: float, weight: float, bound: float, taken: List[bool]):
