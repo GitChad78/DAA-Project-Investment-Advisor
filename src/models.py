@@ -6,9 +6,9 @@ class Stock:
     id: int
     name: str
     cost: float            # price per share (₹)
-    return_val: float      # projected value of one share after the holding period (₹)
+    return_val: float      # projected value of one share after holding period (₹)
     volatility: float = 0.20   # annualised volatility as a decimal (0.20 = 20%)
-    sector: str = "Other"      # "ETF" is treated as a diversified fund
+    sector: str = "Other"      # sector category (e.g., Banking, IT, ETF)
 
     @property
     def profit(self) -> float:
@@ -25,7 +25,7 @@ class Stock:
 
     @property
     def ratio(self) -> float:
-        """Value to cost ratio, for the greedy upper bounding"""
+        """Value to cost ratio, for greedy upper bounding."""
         return self.return_val / self.cost if self.cost > 0 else 0.0
 
 class Node:
