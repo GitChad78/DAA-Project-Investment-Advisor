@@ -1,8 +1,7 @@
 import heapq
 from collections import deque
-from typing import List, Tuple, Dict, Any, Optional
+from typing import List, Dict, Any, Optional
 from src.models import Stock, Node
-
 
 def _sector_ok(chosen: List[Stock], item: Stock, sector_cap: Optional[float]) -> bool:
     """True if adding `item` keeps its sector's spend within `sector_cap` (₹). ETFs are exempt."""
@@ -10,7 +9,6 @@ def _sector_ok(chosen: List[Stock], item: Stock, sector_cap: Optional[float]) ->
         return True
     spent = sum(s.cost for s in chosen if s.sector == item.sector)
     return spent + item.cost <= sector_cap
-
 
 def calculate_upper_bound(node: Node, capacity: float, stocks: List[Stock]) -> float:
     """Calculates Fractional Knapsack upper bound for pruning subtrees."""
@@ -22,18 +20,15 @@ def calculate_upper_bound(node: Node, capacity: float, stocks: List[Stock]) -> f
     n = len(stocks)
     idx = node.level + 1
 
-    # Greedily take full stocks by best return-to-cost ratio
     while idx < n and total_weight + stocks[idx].cost <= capacity:
         total_weight += stocks[idx].cost
         profit_bound += stocks[idx].return_val
         idx += 1
 
-    # Take fractional portion of the next stock if capacity remains
     if idx < n:
         profit_bound += (capacity - total_weight) * stocks[idx].ratio
 
     return profit_bound
-
 
 def solve_fifo_knapsack(stocks: List[Stock], capacity: float, sector_cap: Optional[float] = None) -> Dict[str, Any]:
     """FIFO Branch and Bound 0/1 Knapsack Solver (Queue BFS)."""
@@ -41,14 +36,11 @@ def solve_fifo_knapsack(stocks: List[Stock], capacity: float, sector_cap: Option
     n = len(sorted_stocks)
 
     queue = deque()
-    
     root_bound = calculate_upper_bound(Node(-1, 0, 0, 0, []), capacity, sorted_stocks)
-    root = Node(-1, 0, 0, root_bound, [])
-    queue.append(root)
+    queue.append(Node(-1, 0, 0, root_bound, []))
 
     max_profit = 0.0
     best_taken = [False] * n
-    
     nodes_generated = 1
     nodes_pruned = 0
 
@@ -71,9 +63,7 @@ def solve_fifo_knapsack(stocks: List[Stock], capacity: float, sector_cap: Option
             incl_profit = curr.profit + item.return_val
             incl_weight = curr.weight + item.cost
             incl_taken = curr.taken + [True]
-            incl_bound = calculate_upper_bound(
-                Node(next_idx, incl_profit, incl_weight, 0, incl_taken), capacity, sorted_stocks
-            )
+            incl_bound = calculate_upper_bound(Node(next_idx, incl_profit, incl_weight, 0, incl_taken), capacity, sorted_stocks)
 
             if incl_profit > max_profit:
                 max_profit = incl_profit
@@ -87,9 +77,7 @@ def solve_fifo_knapsack(stocks: List[Stock], capacity: float, sector_cap: Option
 
         # Branch 2: Exclude stock
         excl_taken = curr.taken + [False]
-        excl_bound = calculate_upper_bound(
-            Node(next_idx, curr.profit, curr.weight, 0, excl_taken), capacity, sorted_stocks
-        )
+        excl_bound = calculate_upper_bound(Node(next_idx, curr.profit, curr.weight, 0, excl_taken), capacity, sorted_stocks)
 
         if excl_bound > max_profit:
             queue.append(Node(next_idx, curr.profit, curr.weight, excl_bound, excl_taken))
@@ -110,21 +98,17 @@ def solve_fifo_knapsack(stocks: List[Stock], capacity: float, sector_cap: Option
         "algorithm": "FIFO Branch and Bound"
     }
 
-
 def solve_lc_knapsack(stocks: List[Stock], capacity: float, sector_cap: Optional[float] = None) -> Dict[str, Any]:
     """LC (Least Cost / Best-First) Branch and Bound 0/1 Knapsack Solver (Max-Heap)."""
     sorted_stocks = sorted(stocks, key=lambda s: s.ratio, reverse=True)
     n = len(sorted_stocks)
 
     heap = []
-    
     root_bound = calculate_upper_bound(Node(-1, 0, 0, 0, []), capacity, sorted_stocks)
-    root = Node(-1, 0, 0, root_bound, [])
-    heapq.heappush(heap, root)
+    heapq.heappush(heap, Node(-1, 0, 0, root_bound, []))
 
     max_profit = 0.0
     best_taken = [False] * n
-    
     nodes_generated = 1
     nodes_pruned = 0
 
@@ -147,9 +131,7 @@ def solve_lc_knapsack(stocks: List[Stock], capacity: float, sector_cap: Optional
             incl_profit = curr.profit + item.return_val
             incl_weight = curr.weight + item.cost
             incl_taken = curr.taken + [True]
-            incl_bound = calculate_upper_bound(
-                Node(next_idx, incl_profit, incl_weight, 0, incl_taken), capacity, sorted_stocks
-            )
+            incl_bound = calculate_upper_bound(Node(next_idx, incl_profit, incl_weight, 0, incl_taken), capacity, sorted_stocks)
 
             if incl_profit > max_profit:
                 max_profit = incl_profit
@@ -163,9 +145,7 @@ def solve_lc_knapsack(stocks: List[Stock], capacity: float, sector_cap: Optional
 
         # Branch 2: Exclude stock
         excl_taken = curr.taken + [False]
-        excl_bound = calculate_upper_bound(
-            Node(next_idx, curr.profit, curr.weight, 0, excl_taken), capacity, sorted_stocks
-        )
+        excl_bound = calculate_upper_bound(Node(next_idx, curr.profit, curr.weight, 0, excl_taken), capacity, sorted_stocks)
 
         if excl_bound > max_profit:
             heapq.heappush(heap, Node(next_idx, curr.profit, curr.weight, excl_bound, excl_taken))
@@ -186,7 +166,6 @@ def solve_lc_knapsack(stocks: List[Stock], capacity: float, sector_cap: Optional
         "algorithm": "LC Best-First Branch and Bound"
     }
 
-
 def solve_with_constraints(
     stocks: List[Stock],
     capacity: float,
@@ -194,14 +173,6 @@ def solve_with_constraints(
     sector_cap: Optional[float] = None,
     require_etf: bool = False,
 ) -> Dict[str, Any]:
-    """
-    Runs a B&B solver under extra portfolio constraints.
-    - Only assets with a positive value (return_val) are searched: a non-positive one can never help.
-    - sector_cap: max ₹ per (non-ETF) sector, checked inside the include-branch of the solver.
-      The fractional bound ignores it, which keeps the bound a valid (just looser) upper bound.
-    - require_etf: exact handling of "at least one ETF" by forcing each affordable ETF in turn
-      and keeping the best outcome.
-    """
     pool = [s for s in stocks if s.return_val > 0]
 
     if not require_etf:
@@ -223,14 +194,12 @@ def solve_with_constraints(
                 "algorithm": res["algorithm"],
             }
 
-    if best is None:  # no ETF fits in the budget
+    if best is None:
         return {"max_profit": 0.0, "total_cost": 0.0, "selected_stocks": [],
-                "nodes_generated": 0, "nodes_pruned": 0,
-                "algorithm": "n/a", "feasible": False}
+                "nodes_generated": 0, "nodes_pruned": 0, "algorithm": "n/a", "feasible": False}
 
     best.update(nodes_generated=nodes_generated, nodes_pruned=nodes_pruned, feasible=True)
     return best
-
 
 def solve_greedy(
     stocks: List[Stock],
@@ -238,7 +207,6 @@ def solve_greedy(
     sector_cap: Optional[float] = None,
     require_etf: bool = False,
 ) -> Dict[str, Any]:
-    """Naive baseline: pick by best value/cost ratio while it fits. Same constraints as B&B."""
     ordered = sorted(stocks, key=lambda s: s.ratio, reverse=True)
     chosen: List[Stock] = []
     spent = 0.0
